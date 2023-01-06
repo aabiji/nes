@@ -6,5 +6,5 @@ int main()
   SharedMemory mem;
 
   init_cpu(&cpu, &mem);
-  execute_cycles(&cpu);
+  execute_cpu_instructions(&cpu);
 }
