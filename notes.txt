@@ -1,0 +1,20 @@
+General plan:
+
+- Write in ANSI C99, only dependency being SDL for rendering
+- Maybe use something like Emscripten to port to WASM to run in the browser
+- No external help --> figure everything out myself
+- Fun! Doesn't matter if I take months to "complete" the project
+
+NES
+---
+- CPU -> Basically a 6502 without a BCD mode (makes my life easier anyways)
+- PPU -> Render graphics (Runs 3 times as fast as CPU)
+- APU -> Coprocessor for the custom 6502 (2A03)
+- Mappers -> Support enough to play all the more popular nes games
+- Bus -> Ok, you have components (.c files), how do they now communicate?
+      	 For cpu interrupts and cpu and ppu communication
+      	 Shared memory (all in bus.c or something) or memory specific?
+- Controller???
+- Anything else I missed
+
+Which one to build first?
