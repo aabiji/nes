@@ -183,7 +183,7 @@ static uint16 fetch_instruction_addr(Cpu *cpu, int addr_mode, bool is_read)
   return memory_addr;
 }
 
-void lda(Cpu *cpu, int addr_mode)
+void LDA(Cpu *cpu, int addr_mode)
 {
   uint16 addr = fetch_instruction_addr(cpu, addr_mode, true);
   uint8 byte = read_byte(cpu, addr);
