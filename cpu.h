@@ -18,6 +18,8 @@ Ideas
 #include "utils.h"
 #include "shared_mem.h"
 
+#define CPU_CYCLES_PER_FRAME 1
+
 typedef struct {
   uint8 A;   // Accumulator
   uint8 X;   // X register
@@ -52,13 +54,17 @@ enum addressing_modes {
   indirect    = 10,
   indirect_x  = 11, // Indexed indirect
   indirect_y  = 12, // Indirect indexed
+};
 
-  // Custom addressing modes for instructions
-  // taking an extra cycle to correct the high bit
-  // during a read
-  absolute_x_read = 13,
-  absolute_y_read = 14,
-  indirect_y_read = 15
+// Official instructions
+void lda(Cpu *cpu, int addr_mode);
+
+static void (*opcodes[1]) (Cpu *cpu, int addr_mode) = {
+  &lda
+};
+
+static int addressing_modes[1] = {
+  immediate
 };
 
 void init_cpu(Cpu *cpu, SharedMemory *mem);
