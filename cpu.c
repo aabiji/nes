@@ -1,5 +1,4 @@
 #include "cpu.h"
-#include <stdbool.h>
 #include <stdio.h>
 
 static uint8 read_byte(Cpu* cpu, uint16 addr)
@@ -44,7 +43,8 @@ static void read_status_flag(Cpu *cpu, uint8 byte)
 }
 
 /* Fetch memory location for instruction's operations */
-static uint16 fetch_instruction_addr(Cpu *cpu, int addr_mode, bool is_read)
+static uint16
+fetch_instruction_addr(Cpu *cpu, int addr_mode, bool is_read, bool is_rmw)
 {
   uint16 memory_addr = 0;
 
@@ -53,11 +53,8 @@ static uint16 fetch_instruction_addr(Cpu *cpu, int addr_mode, bool is_read)
   case implied:
   case accumulator:
   case immediate:
-	memory_addr = read_byte(cpu, cpu->PC++);
-	break;
-
   case relative:
-	// TODO!
+	memory_addr = read_byte(cpu, cpu->PC++);
 	break;
 
   case zero_page:
@@ -103,7 +100,7 @@ static uint16 fetch_instruction_addr(Cpu *cpu, int addr_mode, bool is_read)
 		read_byte(cpu, (high << 8) | new_low);
 	}
 
-	if (!is_read)
+	if (!is_read && is_rmw)
 	{
 	  read_byte(cpu, (high << 8) | new_low);
 	}
@@ -125,10 +122,8 @@ static uint16 fetch_instruction_addr(Cpu *cpu, int addr_mode, bool is_read)
 		read_byte(cpu, (high << 8) | new_low);
 	}
 
-	if (!is_read)
-	{
+	if (!is_read && is_rmw)
 	  read_byte(cpu, (high << 8) | new_low);
-	}
 	
 	memory_addr = (high << 8) | new_low;
 	break;
@@ -169,10 +164,8 @@ static uint16 fetch_instruction_addr(Cpu *cpu, int addr_mode, bool is_read)
 		read_byte(cpu, (addr_high << 8) | addr_low);
 	}
 
-	if (!is_read)
-	{
+	if (!is_read && is_rmw)
 	  read_byte(cpu, (addr_high << 8) | addr_low);
-	}
 
 	memory_addr = (addr_high << 8) | new_low;
 	break;
@@ -185,13 +178,50 @@ static uint16 fetch_instruction_addr(Cpu *cpu, int addr_mode, bool is_read)
 
 void LDA(Cpu *cpu, int addr_mode)
 {
-  uint16 addr = fetch_instruction_addr(cpu, addr_mode, true);
+  uint16 addr = fetch_instruction_addr(cpu, addr_mode, true, false);
   uint8 byte = read_byte(cpu, addr);
-  
-  cpu->N = (byte & 0x80) != 0;
-  cpu->Z = (byte == 0);
-
   cpu->A = byte;
+  
+  cpu->N = (cpu->A & 0x80) != 0;
+  cpu->Z = (cpu->A == 0);
+}
+
+void LDX(Cpu *cpu, int addr_mode)
+{
+  uint16 addr = fetch_instruction_addr(cpu, addr_mode, true, false);
+  uint8 byte = read_byte(cpu, addr);
+  cpu->X = byte;
+  
+  cpu->N = (cpu->X & 0x80) != 0;
+  cpu->Z = (cpu->X == 0);
+}
+
+void LDY(Cpu *cpu, int addr_mode)
+{
+  uint16 addr = fetch_instruction_addr(cpu, addr_mode, true, false);
+  uint8 byte = read_byte(cpu, addr);
+  cpu->Y = byte;
+
+  cpu->X = (cpu->Y & 0x80) != 0;
+  cpu->Z = (cpu->Y == 0);
+}
+
+void STA(Cpu *cpu, int addr_mode)
+{
+  uint16 addr = fetch_instruction_addr(cpu, addr_mode, false, false);
+  write_byte(cpu, addr, cpu->A);
+}
+
+void STX(Cpu *cpu, int addr_mode)
+{
+  uint16 addr = fetch_instruction_addr(cpu, addr_mode, false, false);
+  write_byte(cpu, addr, cpu->X);
+}
+
+void STY(Cpu *cpu, int addr_mode)
+{
+  uint16 addr = fetch_instruction_addr(cpu, addr_mode, false, false);
+  write_byte(cpu, addr, cpu->Y);
 }
 
 void init_cpu(Cpu *cpu, SharedMemory *mem)
