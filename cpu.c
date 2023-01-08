@@ -305,7 +305,42 @@ void PLP(Cpu *cpu, int addr_mode)
   fetch_instruction_addr(cpu, addr_mode, false, false);
   read_status_flag(cpu, pop_stack(cpu));
 }
-	
+
+void AND(Cpu *cpu, int addr_mode)
+{
+  uint16 addr = fetch_instruction_addr(cpu, addr_mode, true, false);
+  uint8 byte = read_byte(cpu, addr);
+  cpu->A &= byte;
+  set_negative_and_zero(cpu, cpu->A);
+}
+
+void EOR(Cpu *cpu, int addr_mode)
+{
+  uint16 addr = fetch_instruction_addr(cpu, addr_mode, true, false);
+  uint8 byte = read_byte(cpu, addr);
+  cpu->A ^= byte;
+  set_negative_and_zero(cpu, cpu->A);
+}
+
+void ORA(Cpu *cpu, int addr_mode)
+{
+  uint16 addr = fetch_instruction_addr(cpu, addr_mode, true, false);
+  uint8 byte = read_byte(cpu, addr);
+  cpu->A |= byte;
+  set_negative_and_zero(cpu, cpu->A);
+}
+
+void BIT(Cpu *cpu, int addr_mode)
+{
+  uint16 addr = fetch_instruction_addr(cpu, addr_mode, true, false);
+  uint8 byte = read_byte(cpu, addr);
+  uint8 temp_and = cpu->A & byte;
+
+  cpu->Z = (temp_and == 0);
+  cpu->V = (byte & 0x40) != 0;
+  cpu->N = (byte & 0x80) != 0;
+}
+  
 void init_cpu(Cpu *cpu, SharedMemory *mem)
 {
   cpu->cycle_count = 0;
