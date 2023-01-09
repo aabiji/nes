@@ -29,6 +29,12 @@ static void push_stack(Cpu *cpu, uint8 byte)
   cpu->SP --;
 }
 
+static void set_negative_and_zero(Cpu *cpu, uint8 byte)
+{
+  cpu->Z = (byte == 0);
+  cpu->N = (byte & 0x80) != 0;
+}
+
 static void add_with_carry(Cpu *cpu, uint8 byte)
 {
   uint8 result = cpu->A + byte + cpu->C;
@@ -79,6 +85,9 @@ static uint16 fetch_instruction_addr(Cpu *cpu, int addr_mode, bool is_read)
   {
   case implied:
   case accumulator:
+	memory_addr = read_byte(cpu, cpu->PC);
+	break;
+	
   case immediate:
   case relative:
 	memory_addr = read_byte(cpu, cpu->PC++);
@@ -203,10 +212,52 @@ static uint16 fetch_instruction_addr(Cpu *cpu, int addr_mode, bool is_read)
   return memory_addr;
 }
 
-static void set_negative_and_zero(Cpu *cpu, uint8 byte)
+void branch(Cpu *cpu, bool condition)
 {
-  cpu->Z = (byte == 0);
-  cpu->N = (byte & 0x80) != 0;
+  uint8 operand = (uint8) fetch_instruction_addr(cpu, relative, false);
+  uint8 PCL = (cpu->PC & 0x00FF);
+  uint8 PCH = (cpu->PC & 0xFF00) >> 8;
+  uint8 new_PCL = PCL + operand;
+  
+  if (condition)
+  {
+	read_byte(cpu, cpu->PC);
+	if (new_PCL < PCL)
+	{
+		PCH += 1;
+		cpu->PC = (PCH << 8) | new_PCL;
+		read_byte(cpu, cpu->PC++);
+	} else {
+	  cpu->PC = (PCH << 8) | new_PCL;
+	  cpu->PC += 1;
+	}
+	return;
+  }
+
+  cpu->PC += 1;
+}
+
+void BRK(Cpu *cpu, int addr_mode)
+{
+  fetch_instruction_addr(cpu, immediate, false); // So that we read and increment PC
+  cpu->B = 1;
+  uint8 PCH = (cpu->PC & 0xFF00) >> 8;
+  uint8 PCL = (cpu->PC & 0x00FF);
+  push_stack(cpu, PCH);
+  push_stack(cpu, PCL);
+  push_stack(cpu, write_status_flag(cpu));
+  PCL = read_byte(cpu, 0xFFFE);
+  PCH = read_byte(cpu, 0xFFFF);
+  cpu->PC = (PCH << 8) | PCL;
+}
+
+void RTI(Cpu *cpu, int addr_mode)
+{
+  cpu->cycle_count -= 1;
+  read_status_flag(cpu, pop_stack(cpu));
+  uint8 PCL = pop_stack(cpu);
+  uint8 PCH = pop_stack(cpu);
+  cpu->PC = (PCH << 8) | PCL;
 }
 
 void LDA(Cpu *cpu, int addr_mode)
@@ -241,7 +292,7 @@ void STA(Cpu *cpu, int addr_mode)
 
 void STX(Cpu *cpu, int addr_mode)
 {
-  uint16 addr = fetch_instruction_addr(cpu, addr_mode, false, false);
+  uint16 addr = fetch_instruction_addr(cpu, addr_mode, false);
   write_byte(cpu, addr, cpu->X);
 }
 
@@ -562,6 +613,93 @@ void RTS(Cpu *cpu, int addr_mode)
   uint8 pc_high = pop_stack(cpu);
   cpu->PC = (pc_high << 8) | pc_low;
   cpu->PC ++;
+}
+
+void BCC(Cpu *cpu, int addr_mode)
+{
+  branch(cpu, (cpu->C == 0));
+}
+
+void BCS(Cpu *cpu, int addr_mode)
+{
+  branch(cpu, (cpu->C == 1));
+}
+
+void BNE(Cpu *cpu, int addr_mode)
+{
+  branch(cpu, (cpu->Z == 0));
+}
+
+void BEQ(Cpu *cpu, int addr_mode)
+{
+  branch(cpu, (cpu->Z == 1));
+}
+
+void BPL(Cpu *cpu, int addr_mode)
+{
+  branch(cpu, (cpu->N == 0));
+}
+
+void BMI(Cpu *cpu, int addr_mode)
+{
+  branch(cpu, (cpu->N == 1));
+}
+
+void BVC(Cpu *cpu, int addr_mode)
+{
+  branch(cpu, (cpu->V == 0));
+}
+
+void BVS(Cpu *cpu, int addr_mode)
+{
+  branch(cpu, (cpu->V == 1));
+}
+
+void CLC(Cpu *cpu, int addr_mode)
+{
+  fetch_instruction_addr(cpu, addr_mode, false);
+  cpu->C = 0;
+}
+
+void CLI(Cpu *cpu, int addr_mode)
+{
+  fetch_instruction_addr(cpu, addr_mode, false);
+  cpu->I = 0;
+}
+
+void CLD(Cpu *cpu, int addr_mode)
+{
+  fetch_instruction_addr(cpu, addr_mode, false);
+  cpu->D = 0;
+}
+
+void CLV(Cpu *cpu, int addr_mode)
+{
+  fetch_instruction_addr(cpu, addr_mode, false);
+  cpu->V = 0;
+}
+
+void SEC(Cpu *cpu, int addr_mode)
+{
+  fetch_instruction_addr(cpu, addr_mode, false);
+  cpu->C = 1;
+}
+
+void SEI(Cpu *cpu, int addr_mode)
+{
+  fetch_instruction_addr(cpu, addr_mode, false);
+  cpu->I = 0;
+}
+
+void SED(Cpu *cpu, int addr_mode)
+{
+  fetch_instruction_addr(cpu, addr_mode, false);
+  cpu->D = 1;
+}
+
+void NOP(Cpu *cpu, int addr_mode)
+{
+  fetch_instruction_addr(cpu, addr_mode, false);
 }
 
 void init_cpu(Cpu *cpu, SharedMemory *mem)
