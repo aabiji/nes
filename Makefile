@@ -1,2 +1,2 @@
 all:
-	gcc main.c utils.c shared_mem.c cpu.c -o nes
+	gcc main.c cpu.c shared_mem.c utils.c log.c -o nes

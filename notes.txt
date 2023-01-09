@@ -18,3 +18,10 @@ NES
 - Anything else I missed
 
 Which one to build first?
+
+Cpu test suite ->
+	- Read and parse .nes roms
+		- Load data of the rom into memory somehow
+	- Debug state of cpu
+	- Logging framework to log cpu state to file
+	- Bit of scripting to compare the the log against a valid source

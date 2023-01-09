@@ -1,9 +1,10 @@
 /* 
 Utils: typdefs, and helper functions 
-Reading file contents, etc.
-
 */
 #include <stdbool.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <assert.h>
 
 typedef unsigned char uint8;
 typedef unsigned short int uint16;
