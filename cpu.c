@@ -29,6 +29,18 @@ static void push_stack(Cpu *cpu, uint8 byte)
   cpu->SP --;
 }
 
+static void add_with_carry(Cpu *cpu, uint8 byte)
+{
+  uint8 result = cpu->A + byte + cpu->C;
+
+  cpu->C = (cpu->A + byte + cpu->C) > 0xFF;
+  cpu->Z = (cpu->A == 0);
+  cpu->N = (cpu->A & 0x80) != 0;
+  cpu->V = ((cpu->A ^ result) & (byte ^ result)) & 0x80;
+
+  cpu->A = result;
+}
+
 /* Writing status flags to a byte */
 static uint8 write_status_flag(Cpu *cpu)
 {
@@ -59,8 +71,7 @@ static void read_status_flag(Cpu *cpu, uint8 byte)
 }
 
 /* Fetch memory location for instruction's operations */
-static uint16
-fetch_instruction_addr(Cpu *cpu, int addr_mode, bool is_read, bool is_rmw)
+static uint16 fetch_instruction_addr(Cpu *cpu, int addr_mode, bool is_read)
 {
   uint16 memory_addr = 0;
 
@@ -116,7 +127,7 @@ fetch_instruction_addr(Cpu *cpu, int addr_mode, bool is_read, bool is_rmw)
 		read_byte(cpu, (high << 8) | new_low);
 	}
 
-	if (!is_read && is_rmw)
+	if (!is_read)
 	{
 	  read_byte(cpu, (high << 8) | new_low);
 	}
@@ -138,7 +149,7 @@ fetch_instruction_addr(Cpu *cpu, int addr_mode, bool is_read, bool is_rmw)
 		read_byte(cpu, (high << 8) | new_low);
 	}
 
-	if (!is_read && is_rmw)
+	if (!is_read)
 	  read_byte(cpu, (high << 8) | new_low);
 	
 	memory_addr = (high << 8) | new_low;
@@ -180,7 +191,7 @@ fetch_instruction_addr(Cpu *cpu, int addr_mode, bool is_read, bool is_rmw)
 		read_byte(cpu, (addr_high << 8) | addr_low);
 	}
 
-	if (!is_read && is_rmw)
+	if (!is_read)
 	  read_byte(cpu, (addr_high << 8) | addr_low);
 
 	memory_addr = (addr_high << 8) | new_low;
@@ -200,7 +211,7 @@ static void set_negative_and_zero(Cpu *cpu, uint8 byte)
 
 void LDA(Cpu *cpu, int addr_mode)
 {
-  uint16 addr = fetch_instruction_addr(cpu, addr_mode, true, false);
+  uint16 addr = fetch_instruction_addr(cpu, addr_mode, true);
   uint8 byte = read_byte(cpu, addr);
   cpu->A = byte;
   set_negative_and_zero(cpu, cpu->A);
@@ -208,7 +219,7 @@ void LDA(Cpu *cpu, int addr_mode)
 
 void LDX(Cpu *cpu, int addr_mode)
 {
-  uint16 addr = fetch_instruction_addr(cpu, addr_mode, true, false);
+  uint16 addr = fetch_instruction_addr(cpu, addr_mode, true);
   uint8 byte = read_byte(cpu, addr);
   cpu->X = byte;
   set_negative_and_zero(cpu, cpu->X);
@@ -216,7 +227,7 @@ void LDX(Cpu *cpu, int addr_mode)
 
 void LDY(Cpu *cpu, int addr_mode)
 {
-  uint16 addr = fetch_instruction_addr(cpu, addr_mode, true, false);
+  uint16 addr = fetch_instruction_addr(cpu, addr_mode, true);
   uint8 byte = read_byte(cpu, addr);
   cpu->Y = byte;
   set_negative_and_zero(cpu, cpu->Y);
@@ -224,7 +235,7 @@ void LDY(Cpu *cpu, int addr_mode)
 
 void STA(Cpu *cpu, int addr_mode)
 {
-  uint16 addr = fetch_instruction_addr(cpu, addr_mode, false, false);
+  uint16 addr = fetch_instruction_addr(cpu, addr_mode, false);
   write_byte(cpu, addr, cpu->A);
 }
 
@@ -236,79 +247,79 @@ void STX(Cpu *cpu, int addr_mode)
 
 void STY(Cpu *cpu, int addr_mode)
 {
-  uint16 addr = fetch_instruction_addr(cpu, addr_mode, false, false);
+  uint16 addr = fetch_instruction_addr(cpu, addr_mode, false);
   write_byte(cpu, addr, cpu->Y);
 }
 
 void TAX(Cpu *cpu, int addr_mode)
 {
-  fetch_instruction_addr(cpu, addr_mode, false, false);
+  fetch_instruction_addr(cpu, addr_mode, false);
   cpu->X = cpu->A;
   set_negative_and_zero(cpu, cpu->X);
 }
 
 void TAY(Cpu *cpu, int addr_mode)
 {
-  fetch_instruction_addr(cpu, addr_mode, false, false);
+  fetch_instruction_addr(cpu, addr_mode, false);
   cpu->Y = cpu->A;
   set_negative_and_zero(cpu, cpu->Y);
 }
 
 void TSX(Cpu *cpu, int addr_mode)
 {
-  fetch_instruction_addr(cpu, addr_mode, false, false);
+  fetch_instruction_addr(cpu, addr_mode, false);
   cpu->X = cpu->SP;
   set_negative_and_zero(cpu, cpu->X);
 }
 
 void TXA(Cpu *cpu, int addr_mode)
 {
-  fetch_instruction_addr(cpu, addr_mode, false, false);
+  fetch_instruction_addr(cpu, addr_mode, false);
   cpu->A = cpu->X;
   set_negative_and_zero(cpu, cpu->A);
 }
 
 void TXS(Cpu *cpu, int addr_mode)
 {
-  fetch_instruction_addr(cpu, addr_mode, false, false);
+  fetch_instruction_addr(cpu, addr_mode, false);
   cpu->SP = cpu->X;
 }
 
 void TYA(Cpu *cpu, int addr_mode)
 {
-  fetch_instruction_addr(cpu, addr_mode, false, false);
+  fetch_instruction_addr(cpu, addr_mode, false);
   cpu->A = cpu->Y;
   set_negative_and_zero(cpu, cpu->A);
 }
 
 void PHA(Cpu *cpu, int addr_mode)
 {
-  fetch_instruction_addr(cpu, addr_mode, false, false);
+  fetch_instruction_addr(cpu, addr_mode, false);
   push_stack(cpu, cpu->A);
 }
 
 void PHP(Cpu *cpu, int addr_mode)
 {
-  fetch_instruction_addr(cpu, addr_mode, false, false);
+  fetch_instruction_addr(cpu, addr_mode, false);
   push_stack(cpu, write_status_flag(cpu));
 }
 
 void PLA(Cpu *cpu, int addr_mode)
 {
-  fetch_instruction_addr(cpu, addr_mode, false, false);
+  fetch_instruction_addr(cpu, addr_mode, false);
   cpu->A = pop_stack(cpu);
   set_negative_and_zero(cpu, cpu->A);
 }
 
 void PLP(Cpu *cpu, int addr_mode)
 {
-  fetch_instruction_addr(cpu, addr_mode, false, false);
+  fetch_instruction_addr(cpu, addr_mode, false);
   read_status_flag(cpu, pop_stack(cpu));
 }
 
 void AND(Cpu *cpu, int addr_mode)
 {
-  uint16 addr = fetch_instruction_addr(cpu, addr_mode, true, false);
+  uint16 addr = fetch_instruction_addr(cpu, addr_mode, true);
   uint8 byte = read_byte(cpu, addr);
   cpu->A &= byte;
   set_negative_and_zero(cpu, cpu->A);
@@ -316,7 +327,7 @@ void AND(Cpu *cpu, int addr_mode)
 
 void EOR(Cpu *cpu, int addr_mode)
 {
-  uint16 addr = fetch_instruction_addr(cpu, addr_mode, true, false);
+  uint16 addr = fetch_instruction_addr(cpu, addr_mode, true);
   uint8 byte = read_byte(cpu, addr);
   cpu->A ^= byte;
   set_negative_and_zero(cpu, cpu->A);
@@ -324,7 +335,7 @@ void EOR(Cpu *cpu, int addr_mode)
 
 void ORA(Cpu *cpu, int addr_mode)
 {
-  uint16 addr = fetch_instruction_addr(cpu, addr_mode, true, false);
+  uint16 addr = fetch_instruction_addr(cpu, addr_mode, true);
   uint8 byte = read_byte(cpu, addr);
   cpu->A |= byte;
   set_negative_and_zero(cpu, cpu->A);
@@ -332,7 +343,7 @@ void ORA(Cpu *cpu, int addr_mode)
 
 void BIT(Cpu *cpu, int addr_mode)
 {
-  uint16 addr = fetch_instruction_addr(cpu, addr_mode, true, false);
+  uint16 addr = fetch_instruction_addr(cpu, addr_mode, true);
   uint8 byte = read_byte(cpu, addr);
   uint8 temp_and = cpu->A & byte;
 
@@ -340,7 +351,219 @@ void BIT(Cpu *cpu, int addr_mode)
   cpu->V = (byte & 0x40) != 0;
   cpu->N = (byte & 0x80) != 0;
 }
+
+void ADC(Cpu *cpu, int addr_mode)
+{
+  uint16 addr = fetch_instruction_addr(cpu, addr_mode, true);
+  uint8 byte = read_byte(cpu, addr);
+  add_with_carry(cpu, byte);
+}
+
+void SBC(Cpu *cpu, int addr_mode)
+{
+  uint16 addr = fetch_instruction_addr(cpu, addr_mode, true);
+  uint8 byte = read_byte(cpu, addr);
+  add_with_carry(cpu, (255 - byte));
+}
+
+void CMP(Cpu *cpu, int addr_mode)
+{
+  uint16 addr = fetch_instruction_addr(cpu, addr_mode, true);
+  uint8 byte = read_byte(cpu, addr);
+  uint8 result = cpu->A - byte;
+  cpu->C = (cpu->A >= byte);
+  cpu->Z = (cpu->A == byte);
+  cpu->N = (result & 0x80) != 0;
+}
+
+void CPX(Cpu *cpu, int addr_mode)
+{
+  uint16 addr = fetch_instruction_addr(cpu, addr_mode, true);
+  uint8 byte = read_byte(cpu, addr);
+  uint8 result = cpu->X - byte;
+  cpu->C = (cpu->X >= byte);
+  cpu->Z = (cpu->X == byte);
+  cpu->N = (result & 0x80) != 0;
+}
+
+void CPY(Cpu *cpu, int addr_mode)
+{
+  uint16 addr = fetch_instruction_addr(cpu, addr_mode, true);
+  uint8 byte = read_byte(cpu, addr);
+  uint8 result = cpu->Y - byte;
+  cpu->C = (cpu->Y >= byte);
+  cpu->Z = (cpu->Y == byte);
+  cpu->N = (result & 0x80) != 0;
+}
+
+void INC(Cpu *cpu, int addr_mode)
+{
+  uint16 addr = fetch_instruction_addr(cpu, addr_mode, false);
+  uint8 byte = read_byte(cpu, addr);
+  write_byte(cpu, addr, byte);
+  byte += 1;
   
+  write_byte(cpu, addr, byte);
+  set_negative_and_zero(cpu, byte);
+}
+
+void DEC(Cpu *cpu, int addr_mode)
+{
+  uint16 addr = fetch_instruction_addr(cpu, addr_mode, false);
+  uint8 byte = read_byte(cpu, addr);
+  write_byte(cpu, addr, byte);
+  byte -= 1;
+
+  write_byte(cpu, addr, byte);
+  set_negative_and_zero(cpu, byte);
+}
+
+void INX(Cpu *cpu, int addr_mode)
+{
+  fetch_instruction_addr(cpu, addr_mode, false);
+  cpu->X += 1;
+  set_negative_and_zero(cpu, cpu->X);
+}
+
+void INY(Cpu *cpu, int addr_mode)
+{
+  fetch_instruction_addr(cpu, addr_mode, false);
+  cpu->Y += 1;
+  set_negative_and_zero(cpu, cpu->Y);
+}
+
+void DEX(Cpu *cpu, int addr_mode)
+{
+  fetch_instruction_addr(cpu, addr_mode, false);
+  cpu->X -= 1;
+  set_negative_and_zero(cpu, cpu->X);
+}
+
+void DEY(Cpu *cpu, int addr_mode)
+{
+  fetch_instruction_addr(cpu, addr_mode, false);
+  cpu->Y -= 1;
+  set_negative_and_zero(cpu, cpu->Y);
+}
+
+void ASL(Cpu *cpu, int addr_mode)
+{
+  uint16 addr = fetch_instruction_addr(cpu, addr_mode, false);
+
+  if (addr_mode == accumulator)
+  {
+	cpu->C = (cpu->A & 0x80) != 0;
+	cpu->A = cpu->A << 1;
+	set_negative_and_zero(cpu, cpu->A);
+	return;
+  }
+
+  uint8 byte = read_byte(cpu, addr);
+  write_byte(cpu, addr, byte);
+  cpu->C = (byte & 0x80) != 0;
+
+  byte = byte << 1;
+  write_byte(cpu, addr, byte);
+  set_negative_and_zero(cpu, byte);
+}
+
+void LSR(Cpu *cpu, int addr_mode)
+{
+  uint16 addr = fetch_instruction_addr(cpu, addr_mode, false);
+
+  if (addr_mode == accumulator)
+  {
+	cpu->C = (cpu->A & 0x01) != 0;
+	cpu->A = cpu->A >> 1;
+	set_negative_and_zero(cpu, cpu->A);
+	return;
+  }
+
+  uint8 byte = read_byte(cpu, addr);
+  write_byte(cpu, addr, byte);
+  cpu->C = (byte & 0x01) != 0;
+
+  byte = byte >> 1;
+  write_byte(cpu, addr, byte);
+  set_negative_and_zero(cpu, byte);
+}
+
+void ROL(Cpu *cpu, int addr_mode)
+{
+  uint16 addr = fetch_instruction_addr(cpu, addr_mode, false);
+
+  if (addr_mode == accumulator)
+  {
+	uint8 old_bit_7 = (cpu->A & 0x80) != 0;
+	cpu->A = cpu->A << 1;
+	cpu->A |= cpu->C;
+	cpu->C = old_bit_7;
+	set_negative_and_zero(cpu, cpu->A);
+	return;
+  }
+
+  uint8 byte = read_byte(cpu, addr);
+  write_byte(cpu, addr, byte);
+  
+  uint8 old_bit_7 = (byte & 0x80) != 0;
+  byte = byte << 1;
+  byte |= cpu->C;
+  cpu->C = old_bit_7;
+
+  write_byte(cpu, addr, byte);
+  set_negative_and_zero(cpu, byte);
+}	
+
+void ROR(Cpu *cpu, int addr_mode)
+{
+  uint16 addr = fetch_instruction_addr(cpu, addr_mode, false);
+
+  if (addr_mode == accumulator)
+  {
+	uint8 old_bit_0 = (cpu->A & 0x01) != 0;
+	cpu->A = cpu->A >> 1;
+	cpu->A |= (cpu->C == 1) << 7;
+	cpu->C = old_bit_0;
+	set_negative_and_zero(cpu, cpu->A);
+	return;
+  }
+
+  uint8 byte = read_byte(cpu, addr);
+  write_byte(cpu, addr, byte);
+  
+  uint8 old_bit_0 = (byte & 0x01) != 0;
+  byte = byte >> 1;
+  byte |= (cpu->C == 1) << 7;
+  cpu->C = old_bit_0;
+
+  write_byte(cpu, addr, byte);
+  set_negative_and_zero(cpu, byte);
+}	
+
+void JMP(Cpu *cpu, int addr_mode)
+{
+  uint16 jmp_addr = fetch_instruction_addr(cpu, addr_mode, false);
+  cpu->PC = jmp_addr;
+}
+
+void JSR(Cpu *cpu, int addr_mode)
+{
+  cpu->cycle_count ++;
+  uint16 jmp_addr = fetch_instruction_addr(cpu, addr_mode, false);
+  push_stack(cpu, (cpu->PC & 0xFF00) >> 8);
+  push_stack(cpu, (uint8) (cpu->PC & 0x00FF) - 1);
+  cpu->PC = jmp_addr;
+}
+
+void RTS(Cpu *cpu, int addr_mode)
+{
+  fetch_instruction_addr(cpu, addr_mode, false);
+  uint8 pc_low = pop_stack(cpu);
+  uint8 pc_high = pop_stack(cpu);
+  cpu->PC = (pc_high << 8) | pc_low;
+  cpu->PC ++;
+}
+
 void init_cpu(Cpu *cpu, SharedMemory *mem)
 {
   cpu->cycle_count = 0;
