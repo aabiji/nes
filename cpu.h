@@ -15,12 +15,16 @@ Ideas
 - Test suite, comparing cpu state to known log
 
  */
+#ifndef CPU_H_
+#define CPU_H_
+
+#include "log.h"
 #include "utils.h"
 #include "shared_mem.h"
 
 #define CPU_CYCLES_PER_FRAME 1
 
-typedef struct {
+typedef struct cpu {
   uint8 A;   // Accumulator
   uint8 X;   // X register
   uint8 Y;   // Y register
@@ -38,6 +42,9 @@ typedef struct {
   
   int cycle_count;
   SharedMemory *memspace;
+
+  Logger logger;
+  bool should_log;
 } Cpu;
 
 enum addressing_modes {
@@ -156,5 +163,8 @@ static int addressing_modes[256] = {
   6, 12, 0, 12, 4, 4, 4, 4, 0, 9, 0, 9,  8, 8, 8, 8  // F
 };
 
-void init_cpu(Cpu *cpu, SharedMemory *mem);
 void execute_cpu_instructions(Cpu *cpu);
+void cleanup_cpu(Cpu *cpu);
+void init_cpu(Cpu *cpu, SharedMemory *mem, bool debug_state);
+
+#endif

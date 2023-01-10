@@ -3,7 +3,11 @@
 void init_logger(Logger *logger, char* outfile)
 {
   logger->file_stream = fopen(outfile, "a");
-  assert(logger->file_stream != NULL);
+  if (logger->file_stream == NULL)
+  {
+    printf("File stream was unable to be created: %s\n", outfile);
+	exit(0);
+  }
 }
 
 void write_log(Logger *logger, char* buffer)

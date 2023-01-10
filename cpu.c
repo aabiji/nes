@@ -702,23 +702,34 @@ void NOP(Cpu *cpu, int addr_mode)
   fetch_instruction_addr(cpu, addr_mode, false);
 }
 
-void init_cpu(Cpu *cpu, SharedMemory *mem)
+void init_cpu(Cpu *cpu, SharedMemory *mem, bool debug_state)
 {
   cpu->cycle_count = 0;
   cpu->memspace = mem;
 
+  cpu->should_log = debug_state;
+  if (cpu->should_log)
+  	init_logger(&cpu->logger, "debug.log");
+  
   cpu->PC = 0xFFFC;
   cpu->SP = 0xFD;
   cpu->X = 0;
   cpu->Y = 0;
   cpu->A = 0;
-
   read_status_flag(cpu, 0x34);
+}
+
+void cleanup_cpu(Cpu *cpu)
+{
+  if (cpu->should_log)
+	cleanup_logger(&cpu->logger);
 }
 
 static void (*instruction)(Cpu *cpu, int addr_mode);
 void execute_cpu_instructions(Cpu *cpu)
 {
+  write_log(&cpu->logger, "Hello world from the 2A03!\n");
+  
   while (cpu->cycle_count < CPU_CYCLES_PER_FRAME)
   {
 	uint8 opcode = read_byte(cpu, cpu->PC++);

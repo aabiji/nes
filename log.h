@@ -1,8 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
-#include <assert.h>
 
-typedef struct
+typedef struct log
 {
   FILE* file_stream;
   char* outfile;
