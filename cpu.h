@@ -5,7 +5,7 @@
 
 Ideas
 - Breaking instructions into fetching operands,
-  and actual logic
+	and actual logic
 - fetch_operand(addr_mode);
 - Shared memory for communication between components
 - Official instructions
@@ -19,48 +19,49 @@ Ideas
 #define CPU_H_
 
 #include "log.h"
-#include "utils.h"
 #include "shared_mem.h"
+#include <stdbool.h>
+#include <stdint.h>
 
 #define CPU_CYCLES_PER_FRAME 1
 
 typedef struct cpu {
-  uint8 A;   // Accumulator
-  uint8 X;   // X register
-  uint8 Y;   // Y register
-  uint8 SP;  // Stack pointer
-  uint16 PC; // Program counter
+	uint8_t A;   // Accumulator
+	uint8_t X;   // X register
+	uint8_t Y;   // Y register
+	uint8_t SP;  // Stack pointer
+	uint16_t PC; // Program counter
 
-  /* Processor status flags */
-  uint8 C; // Carry
-  uint8 Z; // Zero
-  uint8 I; // Interrupt disable
-  uint8 D; // Decimal
-  uint8 B; // Break
-  uint8 V; // Overflow
-  uint8 N; // Negative
-  
-  int cycle_count;
-  SharedMemory *memspace;
+	/* Processor status flags */
+	uint8_t C; // Carry
+	uint8_t Z; // Zero
+	uint8_t I; // Interrupt disable
+	uint8_t D; // Decimal
+	uint8_t B; // Break
+	uint8_t V; // Overflow
+	uint8_t N; // Negative
+	
+	int cycle_count;
+	SharedMemory *memspace;
 
-  Logger logger;
-  bool should_log;
+	Logger logger;
+	bool should_log;
 } Cpu;
 
 enum addressing_modes {
-  implied     = 0,
-  accumulator = 1,
-  immediate   = 2,
-  zero_page   = 3,
-  zero_page_x = 4,
-  zero_page_y = 5,
-  relative    = 6,
-  absolute    = 7,
-  absolute_x  = 8,
-  absolute_y  = 9,
-  indirect    = 10,
-  indirect_x  = 11, // Indexed indirect
-  indirect_y  = 12, // Indirect indexed
+	implied     = 0,
+	accumulator = 1,
+	immediate   = 2,
+	zero_page   = 3,
+	zero_page_x = 4,
+	zero_page_y = 5,
+	relative    = 6,
+	absolute    = 7,
+	absolute_x  = 8,
+	absolute_y  = 9,
+	indirect    = 10,
+	indirect_x  = 11, // Indexed indirect
+	indirect_y  = 12, // Indirect indexed
 };
 
 // Official instructions
@@ -124,43 +125,43 @@ void RTI(Cpu *cpu, int addr_mode); // Return from interrupt
 // For now we're replacing unofficial instructions
 // with NOP
 static void (*opcodes[256]) (Cpu *cpu, int addr_mode) = {
-  // 0,    1,    2,    3,    4,    5,   6,     7,    8,    9,   A,     B,    C,    D,   E,     F
-  &BRK, &ORA, &NOP, &NOP, &NOP, &ORA, &ASL, &NOP, &PHP, &ORA, &ASL, &NOP, &NOP, &ORA, &ASL, &NOP, // 0
-  &BPL, &ORA, &NOP, &NOP, &NOP, &ORA, &ASL, &NOP, &CLC, &ORA, &NOP, &NOP, &NOP, &ORA, &ASL, &NOP, // 1
-  &JSR, &AND, &NOP, &NOP, &BIT, &AND, &ROL, &NOP, &PLP, &AND, &ROL, &NOP, &BIT, &AND, &ROL, &NOP, // 2
-  &BMI, &AND, &NOP, &NOP, &NOP, &AND, &ROL, &NOP, &SEC, &AND, &NOP, &NOP, &NOP, &AND, &ROL, &NOP, // 3
-  &RTI, &EOR, &NOP, &NOP, &NOP, &EOR, &LSR, &NOP, &PHA, &EOR, &LSR, &NOP, &JMP, &EOR, &LSR, &NOP, // 4
-  &BVC, &EOR, &NOP, &NOP, &NOP, &EOR, &LSR, &NOP, &CLI, &EOR, &NOP, &NOP, &NOP, &EOR, &LSR, &NOP, // 5
-  &RTS, &ADC, &NOP, &NOP, &NOP, &ADC, &ROR, &NOP, &PLA, &ADC, &ROR, &NOP, &JMP, &ADC, &ROR, &NOP, // 6
-  &BVS, &ADC, &NOP, &NOP, &NOP, &ADC, &ROR, &NOP, &SEI, &ADC, &NOP, &NOP, &NOP, &ADC, &ROR, &NOP, // 7
-  &NOP, &STA, &NOP, &NOP, &STY, &STA, &STX, &NOP, &DEY, &NOP, &TXA, &NOP, &STY, &STA, &STX, &NOP, // 8
-  &BCC, &STA, &NOP, &NOP, &STY, &STA, &STX, &NOP, &TYA, &STA, &TXS, &NOP, &NOP, &STA, &NOP, &NOP, // 9
-  &LDY, &LDA, &LDX, &NOP, &LDY, &LDA, &LDX, &NOP, &TAY, &LDA, &TAX, &NOP, &LDY, &LDA, &LDX, &NOP, // A
-  &BCS, &LDA, &NOP, &NOP, &LDY, &LDA, &LDX, &NOP, &CLV, &LDA, &TSX, &NOP, &LDY, &LDA, &LDX, &NOP, // B
-  &CPY, &CMP, &NOP, &NOP, &CPY, &CMP, &DEC, &NOP, &INY, &CMP, &DEX, &NOP, &CPY, &CMP, &DEX, &NOP, // C
-  &BNE, &CMP, &NOP, &NOP, &NOP, &CMP, &DEC, &NOP, &CLD, &CMP, &NOP, &NOP, &NOP, &CMP, &DEC, &NOP, // D
-  &CPX, &SBC, &NOP, &NOP, &CPX, &SBC, &INC, &NOP, &INX, &SBC, &NOP, &NOP, &CPX, &SBC, &INC, &NOP, // E
-  &BEQ, &SBC, &NOP, &NOP, &NOP, &SBC, &INC, &NOP, &SED, &SBC, &NOP, &NOP, &NOP, &SBC, &INC, &NOP  // F
+	// 0,    1,    2,    3,    4,    5,   6,     7,    8,    9,   A,     B,    C,    D,   E,     F
+	&BRK, &ORA, &NOP, &NOP, &NOP, &ORA, &ASL, &NOP, &PHP, &ORA, &ASL, &NOP, &NOP, &ORA, &ASL, &NOP, // 0
+	&BPL, &ORA, &NOP, &NOP, &NOP, &ORA, &ASL, &NOP, &CLC, &ORA, &NOP, &NOP, &NOP, &ORA, &ASL, &NOP, // 1
+	&JSR, &AND, &NOP, &NOP, &BIT, &AND, &ROL, &NOP, &PLP, &AND, &ROL, &NOP, &BIT, &AND, &ROL, &NOP, // 2
+	&BMI, &AND, &NOP, &NOP, &NOP, &AND, &ROL, &NOP, &SEC, &AND, &NOP, &NOP, &NOP, &AND, &ROL, &NOP, // 3
+	&RTI, &EOR, &NOP, &NOP, &NOP, &EOR, &LSR, &NOP, &PHA, &EOR, &LSR, &NOP, &JMP, &EOR, &LSR, &NOP, // 4
+	&BVC, &EOR, &NOP, &NOP, &NOP, &EOR, &LSR, &NOP, &CLI, &EOR, &NOP, &NOP, &NOP, &EOR, &LSR, &NOP, // 5
+	&RTS, &ADC, &NOP, &NOP, &NOP, &ADC, &ROR, &NOP, &PLA, &ADC, &ROR, &NOP, &JMP, &ADC, &ROR, &NOP, // 6
+	&BVS, &ADC, &NOP, &NOP, &NOP, &ADC, &ROR, &NOP, &SEI, &ADC, &NOP, &NOP, &NOP, &ADC, &ROR, &NOP, // 7
+	&NOP, &STA, &NOP, &NOP, &STY, &STA, &STX, &NOP, &DEY, &NOP, &TXA, &NOP, &STY, &STA, &STX, &NOP, // 8
+	&BCC, &STA, &NOP, &NOP, &STY, &STA, &STX, &NOP, &TYA, &STA, &TXS, &NOP, &NOP, &STA, &NOP, &NOP, // 9
+	&LDY, &LDA, &LDX, &NOP, &LDY, &LDA, &LDX, &NOP, &TAY, &LDA, &TAX, &NOP, &LDY, &LDA, &LDX, &NOP, // A
+	&BCS, &LDA, &NOP, &NOP, &LDY, &LDA, &LDX, &NOP, &CLV, &LDA, &TSX, &NOP, &LDY, &LDA, &LDX, &NOP, // B
+	&CPY, &CMP, &NOP, &NOP, &CPY, &CMP, &DEC, &NOP, &INY, &CMP, &DEX, &NOP, &CPY, &CMP, &DEX, &NOP, // C
+	&BNE, &CMP, &NOP, &NOP, &NOP, &CMP, &DEC, &NOP, &CLD, &CMP, &NOP, &NOP, &NOP, &CMP, &DEC, &NOP, // D
+	&CPX, &SBC, &NOP, &NOP, &CPX, &SBC, &INC, &NOP, &INX, &SBC, &NOP, &NOP, &CPX, &SBC, &INC, &NOP, // E
+	&BEQ, &SBC, &NOP, &NOP, &NOP, &SBC, &INC, &NOP, &SED, &SBC, &NOP, &NOP, &NOP, &SBC, &INC, &NOP  // F
 };
 
 static int addressing_modes[256] = {
 //0   1  2   3  4  5  6  7  8  9  A  B   C  D  E  F
-  0, 11, 0, 11, 3, 3, 3, 3, 0, 2, 1, 2,  7, 7, 7, 7, // 0
-  6, 12, 0, 12, 4, 4, 4, 4, 0, 9, 0, 9,  8, 8, 8, 8, // 1
-  7, 11, 0, 11, 3, 3, 3, 3, 0, 2, 1, 2,  7, 7, 7, 7, // 2
-  6, 12, 0, 12, 4, 4, 4, 4, 0, 9, 0, 9,  8, 8, 8, 8, // 3
-  0, 11, 0, 11, 3, 3, 3, 3, 0, 2, 1, 2,  7, 7, 7, 7, // 4
-  6, 12, 0, 12, 4, 4, 4, 4, 0, 9, 0, 9,  8, 8, 8, 8, // 5
-  0, 11, 0, 11, 3, 3, 3, 3, 0, 2, 1, 2, 10, 7, 7, 7, // 6
-  6, 12, 0, 12, 4, 4, 4, 4, 0, 9, 0, 9,  8, 8, 8, 8, // 7
-  2, 11, 2, 11, 3, 3, 3, 3, 0, 2, 0, 2,  8, 8, 8, 8, // 8
-  6, 12, 0, 12, 4, 4, 5, 5, 0, 9, 0, 9,  8, 8, 9, 9, // 9
-  2, 11, 2, 11, 3, 3, 3, 3, 0, 2, 0, 2,  7, 7, 7, 7, // A
-  6, 12, 0, 12, 4, 4, 5, 5, 0, 9, 0, 9,  8, 8, 9, 9, // B
-  2, 11, 2, 11, 3, 3, 3, 3, 0, 2, 0, 2,  7, 7, 7, 7, // C
-  6, 12, 0, 12, 4, 4, 4, 4, 0, 9, 0, 9,  8, 8, 8, 8, // D
-  2, 11, 2, 11, 3, 3, 3, 3, 0, 2, 0, 2,  7, 7, 7, 7, // E
-  6, 12, 0, 12, 4, 4, 4, 4, 0, 9, 0, 9,  8, 8, 8, 8  // F
+	0, 11, 0, 11, 3, 3, 3, 3, 0, 2, 1, 2,  7, 7, 7, 7, // 0
+	6, 12, 0, 12, 4, 4, 4, 4, 0, 9, 0, 9,  8, 8, 8, 8, // 1
+	7, 11, 0, 11, 3, 3, 3, 3, 0, 2, 1, 2,  7, 7, 7, 7, // 2
+	6, 12, 0, 12, 4, 4, 4, 4, 0, 9, 0, 9,  8, 8, 8, 8, // 3
+	0, 11, 0, 11, 3, 3, 3, 3, 0, 2, 1, 2,  7, 7, 7, 7, // 4
+	6, 12, 0, 12, 4, 4, 4, 4, 0, 9, 0, 9,  8, 8, 8, 8, // 5
+	0, 11, 0, 11, 3, 3, 3, 3, 0, 2, 1, 2, 10, 7, 7, 7, // 6
+	6, 12, 0, 12, 4, 4, 4, 4, 0, 9, 0, 9,  8, 8, 8, 8, // 7
+	2, 11, 2, 11, 3, 3, 3, 3, 0, 2, 0, 2,  8, 8, 8, 8, // 8
+	6, 12, 0, 12, 4, 4, 5, 5, 0, 9, 0, 9,  8, 8, 9, 9, // 9
+	2, 11, 2, 11, 3, 3, 3, 3, 0, 2, 0, 2,  7, 7, 7, 7, // A
+	6, 12, 0, 12, 4, 4, 5, 5, 0, 9, 0, 9,  8, 8, 9, 9, // B
+	2, 11, 2, 11, 3, 3, 3, 3, 0, 2, 0, 2,  7, 7, 7, 7, // C
+	6, 12, 0, 12, 4, 4, 4, 4, 0, 9, 0, 9,  8, 8, 8, 8, // D
+	2, 11, 2, 11, 3, 3, 3, 3, 0, 2, 0, 2,  7, 7, 7, 7, // E
+	6, 12, 0, 12, 4, 4, 4, 4, 0, 9, 0, 9,  8, 8, 8, 8  // F
 };
 
 void execute_cpu_instructions(Cpu *cpu);

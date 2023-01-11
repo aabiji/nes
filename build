@@ -1,4 +1,4 @@
 #!/usr/bin/sh
 
-make && ./nes && rm nes
+make && ./nes && rm nes && rm debug.log
 

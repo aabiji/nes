@@ -3,8 +3,8 @@
 
 typedef struct log
 {
-  FILE* file_stream;
-  char* outfile;
+	FILE* file_stream;
+	char* outfile;
 } Logger;
 
 void init_logger(Logger *logger, char* outfile);
